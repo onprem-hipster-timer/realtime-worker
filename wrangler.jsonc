@@ -9,11 +9,6 @@
   },
   "exports": {
     "UserHub": { "type": "durable-object", "storage": "sqlite" }
-  },
-  "vars": {
-    "JWKS_URL": "https://api.example.com/auth/.well-known/jwks.json",
-    "JWT_ISSUER": "https://api.example.com/auth/",
-    "JWT_AUDIENCE": "https://api.example.com"
   }
-  // routes, 실제 vars, PUSH_SECRET은 배포 환경에서 설정한다 (README).
+  // routes·vars·PUSH_SECRET은 배포 환경이 준다 (README "배포"). 로컬은 .dev.vars와 --var.
 }

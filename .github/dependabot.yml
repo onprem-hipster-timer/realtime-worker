@@ -1,0 +1,18 @@
+version: 2
+updates:
+  # 런타임 의존성은 exact pin. 월 1회 하나의 PR로 묶고, diff를 읽은 뒤 병합한다.
+  - package-ecosystem: "npm"
+    directory: "/"
+    schedule:
+      interval: "monthly"
+      timezone: "Asia/Seoul"
+    commit-message:
+      prefix: "chore"
+      include: "scope"
+    # 갓 나온 버전은 숙성 기간을 둔다(보안 업데이트는 제외).
+    cooldown:
+      default-days: 7
+    groups:
+      npm-all:
+        patterns:
+          - "*"
