@@ -4,7 +4,7 @@
 
 - 명령·접근 판정·상태는 backend(Python)가 결정합니다. 이 Worker는 인증과 전달만 합니다.
 - **온프렘 배포에는 필요 없습니다.** backend 기본값 `REALTIME_BACKEND=inprocess`는 프로세스 안의 WebSocket(`/v1/ws/timers`)으로 같은 계약을 제공합니다.
-- 소유 범위: 이 Worker의 스크립트·route·시크릿은 wrangler가 관리합니다. Terraform(`infra`)은 backend 쪽 env와 `realtime-push-secret`만 관리합니다.
+- 소유 범위: 이 Worker의 스크립트·route·변수·시크릿은 이 저장소의 배포 워크플로가 wrangler로 올립니다. Terraform(`infra`)은 그 워크플로가 쓰는 Cloudflare 토큰, backend와 공유하는 `realtime-push-secret`, backend env를 관리합니다.
 
 ## 계약
 
@@ -36,9 +36,9 @@
 | `JWT_ISSUER` | var | Kratos JWT의 `iss` |
 | `JWT_AUDIENCE` | var | Kratos JWT의 `aud` |
 | `PUSH_SECRET` | secret | backend `REALTIME_PUSH_SECRET`과 같은 값 |
-| `routes` | wrangler.jsonc | `<api_host>/realtime/*` |
+| route | 배포 명령 | `<api_host>/realtime/*`. 같은 호스트의 custom domain보다 route가 우선하므로 이 경로만 이 Worker로 온다 |
 
-`wrangler.jsonc`의 `routes`와 `vars`는 `api.example.com` 자리표시자입니다. 배포하기 전에 실제 호스트와 zone으로 바꿔 커밋합니다(자리표시자 그대로면 배포가 실패합니다). 같은 호스트의 custom domain보다 route가 우선하므로 `/realtime/*`만 이 Worker로 옵니다.
+`wrangler.jsonc`에는 코드 구조(DO 바인딩, `exports`, compatibility date)만 있다. 호스트에 따라 달라지는 값은 저장소에 두지 않는다.
 
 ## 로컬 실행
 
@@ -46,12 +46,6 @@
 npm ci
 npx wrangler types          # worker-configuration.d.ts 생성 (커밋하지 않음)
 echo 'PUSH_SECRET=dev-secret' > .dev.vars
-npm run dev                 # wrangler dev
-```
-
-로컬 backend의 JWKS를 쓰려면 vars를 덮어씁니다.
-
-```bash
 npx wrangler dev --var JWKS_URL:http://localhost:8000/auth/.well-known/jwks.json \
   --var JWT_ISSUER:<iss> --var JWT_AUDIENCE:<aud>
 ```
@@ -60,11 +54,20 @@ npx wrangler dev --var JWKS_URL:http://localhost:8000/auth/.well-known/jwks.json
 
 ## 배포
 
-`main`에 push하면 `.github/workflows/deploy.yml`이 `npm run check` 뒤 `cloudflare/wrangler-action@v4`로 `wrangler deploy`를 실행합니다.
+`main`에 push되면 `.github/workflows/deploy.yml`이 `npm run check` 뒤 `wrangler deploy`로 올립니다. 호스트마다 다른 값은 저장소에 없고 배포 환경이 줍니다.
 
-1. 레포 시크릿: `CLOUDFLARE_API_TOKEN`(Edit Cloudflare Workers 템플릿 + Zone 권한 Workers Routes 편집), `CLOUDFLARE_ACCOUNT_ID`.
-2. `wrangler.jsonc`의 `routes`·`vars`를 실제 값으로 바꿉니다.
-3. 첫 배포 뒤 1회, 운영자가 `npx wrangler secret put PUSH_SECRET`. 설정 전에는 모든 push가 `401`입니다.
+| 저장소 변수 | 값 |
+| --- | --- |
+| `API_HOST` | api 호스트(예: `api.example.com`). route `API_HOST/realtime/*`와 `JWKS_URL`·`JWT_ISSUER`·`JWT_AUDIENCE`가 여기서 나온다 |
+| `CLOUDFLARE_ACCOUNT_ID` | Worker를 올릴 Cloudflare 계정 |
+| `GCP_PROJECT_ID`, `GCP_DEPLOY_WIF_PROVIDER`, `GCP_DEPLOYER_SA` | Secret Manager에서 비밀 값을 받기 위한 Workload Identity Federation(infra README "CI 배포") |
+
+비밀 값 두 개는 GitHub에 저장하지 않습니다. 워크플로가 WIF로 로그인해 Secret Manager에서 받습니다.
+
+- `realtime-deploy-token`: Cloudflare API 토큰. Workers Scripts 쓰기·Account Settings 읽기(계정), Zone 읽기·Workers Routes 쓰기(존)만 있으면 됩니다. infra가 발급합니다.
+- `realtime-push-secret`: backend의 `REALTIME_PUSH_SECRET`과 같은 값. 배포 뒤 `wrangler secret put PUSH_SECRET`으로 넣습니다. 없으면 모든 push가 `401`입니다.
+
+GCP를 쓰지 않는 배포는 워크플로의 "Read deploy secrets" 단계만 자기 시크릿 저장소(또는 GitHub 시크릿)로 바꿉니다. 뒤 단계는 환경 변수 `CLOUDFLARE_API_TOKEN`과 `PUSH_SECRET`만 봅니다.
 
 JWKS 키 회전: jose는 JWKS를 isolate마다 10분 캐시하고, 모르는 `kid`를 만나면 다시 받습니다. 다만 마지막으로 받은 지 30초 안이면 다시 받지 않고 `1008`로 닫습니다(클라이언트는 1008에서 재연결을 멈춥니다). 그래서 새 키는 서명에 쓰기 **전에** JWKS에 게시해 두고(backend 응답의 `Cache-Control: max-age=3600`을 고려해 1시간 이상), 옛 키는 그 키로 서명한 토큰이 만료될 때까지 남겨 둡니다.
 
