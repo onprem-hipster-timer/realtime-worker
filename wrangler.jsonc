@@ -10,10 +10,12 @@
   "exports": {
     "UserHub": { "type": "durable-object", "storage": "sqlite" }
   },
+  "routes": [{ "pattern": "api.example.com/realtime/*", "zone_name": "example.com" }],
   "vars": {
     "JWKS_URL": "https://api.example.com/auth/.well-known/jwks.json",
     "JWT_ISSUER": "https://api.example.com/auth/",
     "JWT_AUDIENCE": "https://api.example.com"
   }
-  // routes, 실제 vars, PUSH_SECRET은 배포 환경에서 설정한다 (README).
+  // routes와 vars는 자리표시자다. 배포 전에 실제 호스트로 바꾼다 (README).
+  // PUSH_SECRET은 `wrangler secret put PUSH_SECRET`으로 넣는다.
 }
