@@ -64,7 +64,7 @@ npx wrangler dev --var JWKS_URL:http://localhost:8000/auth/.well-known/jwks.json
 
 비밀 값 두 개는 GitHub에 저장하지 않습니다. 워크플로가 WIF로 로그인해 Secret Manager에서 받습니다.
 
-- `realtime-deploy-token`: Cloudflare API 토큰. Workers Scripts 쓰기·Account Settings 읽기(계정), Zone 읽기·Workers Routes 쓰기(존)만 있으면 됩니다. infra가 발급합니다.
+- `realtime-deploy-token`: Cloudflare API 토큰. Workers Scripts 쓰기·Account Settings 읽기(계정), Zone 읽기·Workers Routes 쓰기(존)만 있으면 됩니다. 대시보드에서 만들어 넣습니다.
 - `realtime-push-secret`: backend의 `REALTIME_PUSH_SECRET`과 같은 값. 배포 뒤 `wrangler secret put PUSH_SECRET`으로 넣습니다. 없으면 모든 push가 `401`입니다.
 
 GCP를 쓰지 않는 배포는 워크플로의 "Read deploy secrets" 단계만 자기 시크릿 저장소(또는 GitHub 시크릿)로 바꿉니다. 뒤 단계는 환경 변수 `CLOUDFLARE_API_TOKEN`과 `PUSH_SECRET`만 봅니다.
