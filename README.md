@@ -1,9 +1,9 @@
 # realtime-worker
 
-타이머 실시간 전달의 **호스팅 모드** 메시지 서버입니다. Cloudflare Worker가 연결을 인증하고, 사용자마다 하나인 Durable Object(`UserHub`, Hibernation)가 소켓을 들고 있다가 backend가 보낸 메시지를 전달합니다.
+타이머 실시간 전달에서 소켓을 backend 밖에서 서빙하는 메시지 서버입니다(`REALTIME_BACKEND=cloudflare`). Cloudflare Worker가 연결을 인증하고, 사용자마다 하나인 Durable Object(`UserHub`, Hibernation)가 소켓을 들고 있다가 backend가 보낸 메시지를 전달합니다.
 
 - 명령·접근 판정·상태는 backend(Python)가 결정합니다. 이 Worker는 인증과 전달만 합니다.
-- **온프렘 배포에는 필요 없습니다.** backend 기본값 `REALTIME_BACKEND=inprocess`는 프로세스 안의 WebSocket(`/v1/ws/timers`)으로 같은 계약을 제공합니다.
+- **`REALTIME_BACKEND=inprocess`(기본)에서는 필요 없습니다.** backend가 프로세스 안의 WebSocket(`/v1/ws/timers`)으로 같은 계약을 제공합니다.
 - 소유 범위: 이 Worker의 스크립트·route·변수·시크릿은 이 저장소의 배포 워크플로가 wrangler로 올립니다. Terraform(`infra`)은 그 워크플로가 쓰는 Cloudflare 토큰, backend와 공유하는 `realtime-push-secret`, backend env를 관리합니다.
 
 ## 계약
